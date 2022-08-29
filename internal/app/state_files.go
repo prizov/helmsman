@@ -14,7 +14,7 @@ import (
 )
 
 // invokes either yaml or toml parser considering file extension
-func (s *State) fromFile(file string) error {
+func (s *StateFile) fromFile(file string) error {
 	if isOfType(file, []string{".toml", ".tml"}) {
 		return s.fromTOML(file)
 	} else if isOfType(file, []string{".yaml", ".yml"}) {
@@ -36,7 +36,7 @@ func (s *State) toFile(file string) {
 
 // fromTOML reads a toml file and decodes it to a state type.
 // It uses the BurntSuchi TOML parser which throws an error if the TOML file is not valid.
-func (s *State) fromTOML(file string) error {
+func (s *StateFile) fromTOML(file string) error {
 	rawTomlFile, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (s *State) toTOML(file string) {
 
 // fromYAML reads a yaml file and decodes it to a state type.
 // parser which throws an error if the YAML file is not valid.
-func (s *State) fromYAML(file string) error {
+func (s *StateFile) fromYAML(file string) error {
 	rawYamlFile, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
@@ -116,9 +116,31 @@ func (s *State) toYAML(file string) {
 	log.Info(fmt.Sprintf("Wrote to %s.\n", file))
 }
 
+type ReleaseSpec struct {
+	Release
+	Enabled *bool `json:"enabled"`
+}
+
+type StateFile struct {
+	State
+	Apps map[string]*ReleaseSpec `json:"apps"`
+}
+
+func (s *StateFile) Releases() map[string]*Release {
+	releases := make(map[string]*Release)
+	for name, release := range s.Apps {
+		if release.Enabled != nil {
+			release.Release.Enabled = *(release.Enabled)
+		}
+		releases[name] = &release.Release
+	}
+
+	return releases
+}
+
 func (s *State) build(files fileOptionArray) error {
 	for _, f := range files {
-		var fileState State
+		var fileState StateFile
 
 		if err := fileState.fromFile(f.name); err != nil {
 			return err
@@ -142,20 +164,23 @@ func (s *State) build(files fileOptionArray) error {
 		// Merge Apps that already existed in the state
 		for appName, app := range fileState.Apps {
 			if _, ok := s.Apps[appName]; ok {
-				if err := mergo.Merge(s.Apps[appName], app, mergo.WithAppendSlice, mergo.WithOverride); err != nil {
+				if err := mergo.Merge(s.Apps[appName], app.Release, mergo.WithAppendSlice, mergo.WithOverride); err != nil {
 					return fmt.Errorf("failed to merge %s from desired state file %s: %w", appName, f.name, err)
 				}
+				if app.Enabled != nil {
+					s.Apps[appName].Enabled = *(app.Enabled)
+				}
 			}
+
 		}
 
 		// Merge the remaining Apps
-		if err := mergo.Merge(&s.Apps, &fileState.Apps); err != nil {
+		if err := mergo.Merge(&s.Apps, fileState.Releases()); err != nil {
 			return fmt.Errorf("failed to merge desired state file %s: %w", f.name, err)
 		}
 		// All the apps are already merged, make fileState.Apps empty to avoid conflicts in the final merge
-		fileState.Apps = make(map[string]*Release)
 
-		if err := mergo.Merge(s, &fileState, mergo.WithAppendSlice, mergo.WithOverride); err != nil {
+		if err := mergo.Merge(s, &fileState.State, mergo.WithAppendSlice, mergo.WithOverride); err != nil {
 			return fmt.Errorf("failed to merge desired state file %s: %w", f.name, err)
 		}
 	}
@@ -166,7 +191,7 @@ func (s *State) build(files fileOptionArray) error {
 
 // expand resolves relative paths of certs/keys/chart/value file/secret files/etc and replace them with a absolute paths
 // it also loops through the values/secrets files and substitutes variables into them.
-func (s *State) expand(relativeToFile string) {
+func (s *StateFile) expand(relativeToFile string) {
 	dir := filepath.Dir(relativeToFile)
 	downloadDest, _ := filepath.Abs(createTempDir(tempFilesDir, "tmp"))
 	validProtocols := []string{"http", "https"}
