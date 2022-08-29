@@ -116,5 +116,5 @@ func (r *helmRelease) getChartVersion() string {
 // getCurrentNamespaceProtection returns the protection state for the namespace where a release is currently installed.
 // It returns true if a namespace is defined as protected in the desired state file, false otherwise.
 func (r *helmRelease) getCurrentNamespaceProtection(s *State) bool {
-	return s.Namespaces[r.Namespace].Protected
+	return s.Namespaces[r.Namespace].Protected.Value
 }

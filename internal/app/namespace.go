@@ -57,7 +57,7 @@ type Quotas struct {
 // Namespace type represents the fields of a Namespace
 type Namespace struct {
 	// Protected if set to true no changes can be applied to the namespace
-	Protected bool `json:"protected"`
+	Protected Bool `json:"protected,omitempty"`
 	// Limits to set on the namespace
 	Limits Limits `json:"limits,omitempty"`
 	// Labels to set to the namespace
@@ -75,7 +75,7 @@ func (n *Namespace) Disable() {
 
 // print prints the namespace
 func (n *Namespace) print() {
-	fmt.Println("\tprotected: ", n.Protected)
+	fmt.Println("\tprotected: ", n.Protected.Value)
 	fmt.Println("\tdisabled: ", n.disabled)
 	fmt.Println("\tlabels:")
 	printMap(n.Labels, 2)
