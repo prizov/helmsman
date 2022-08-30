@@ -17,9 +17,9 @@ type Release struct {
 	// Namespace where to deploy the helm release
 	Namespace string `json:"namespace"`
 	// Enabled can be used to togle a helm release
-	Enabled Bool   `json:"enabled"`
-	Group   string `json:"group,omitempty"`
-	Chart   string `json:"chart"`
+	Enabled Boolean `json:"enabled"`
+	Group   string  `json:"group,omitempty"`
+	Chart   string  `json:"chart"`
 	// Version of the helm chart to deploy
 	Version string `json:"version"`
 	// ValuesFile is the path for a values file for the helm release
@@ -33,11 +33,11 @@ type Release struct {
 	// PostRenderer is the path to an executable to be used for post rendering
 	PostRenderer string `json:"postRenderer,omitempty"`
 	// Test indicates if the chart tests should be executed
-	Test Bool `json:"test,omitempty"`
+	Test Boolean `json:"test,omitempty"`
 	// Protected defines if the release should be protected against changes
-	Protected Bool `json:"protected,omitempty"`
+	Protected Boolean `json:"protected,omitempty"`
 	// Wait defines whether helm should block execution until all k8s resources are in a ready state
-	Wait Bool `json:"wait,omitempty"`
+	Wait Boolean `json:"wait,omitempty"`
 	// Priority allows defining the execution order, releases with the same priority can be executed in parallel
 	Priority int `json:"priority,omitempty"`
 	// Set can be used to overwrite the chart values
@@ -51,7 +51,7 @@ type Release struct {
 	// HelmDiffFlags is a list of cli flags to pass to helm diff
 	HelmDiffFlags []string `json:"helmDiffFlags,omitempty"`
 	// NoHooks can be used to disable the execution of helm hooks
-	NoHooks Bool `json:"noHooks,omitempty"`
+	NoHooks Boolean `json:"noHooks,omitempty"`
 	// Timeout is the number of seconds to wait for the release to complete
 	Timeout int `json:"timeout,omitempty"`
 	// Hooks can be used to define lifecycle hooks specific to this release
@@ -330,7 +330,7 @@ func (r *Release) isProtected(cs *currentState, n *Namespace) bool {
 	if ok := cs.releaseExists(r, ""); !ok {
 		return false
 	}
-	if n.Protected.Value || r.Protected.Value {
+	if n.Protected || r.Protected.Value {
 		return true
 	}
 	return false
